@@ -70,3 +70,6 @@ def is_root():
 def get_python_version():
 	# (2, 5, 2, 'final', 0)
 	return sys.version_info[0]
+
+
+install()
