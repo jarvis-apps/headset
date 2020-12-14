@@ -5,7 +5,7 @@
 import sys, os, hashlib, apt, re
 from getpass import getpass
 
-def install(token_file):
+def install():
 	global INSTALL_DIRECTORY
 	if get_python_version() != 3:
 		print("You need to run this script with python3")
