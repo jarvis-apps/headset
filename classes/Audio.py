@@ -7,4 +7,4 @@ class Audio:
 		pass
 
 	def get_available_sinks():
-		
+		pass

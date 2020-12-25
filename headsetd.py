@@ -4,17 +4,33 @@
 
 # do imports
 import sys, os, time
-from jarvis.Jarvis import Jarvis
-from jarvis.Headset import Headset
-from jarvis.Logger import Logger
-
+from jarvis import Jarvis, Logger, MQTT
+from classes.Headset import Headset
 
 # define globals
 DIR = os.path.dirname(os.path.realpath(__file__))
 TOKEN_FILE = "{}/token".format(DIR)
 LOG_FILE = "{}/logs/headset.log".format(DIR)
-LOG_TAG = "app:headsetD"
+LOG_TAG = "app:headsetd"
 
+headset = Headset()
+
+
+if "--test" in sys.argv:
+	print("You're running this script in test mode. You have the following options:")
+	print(" 0 - Call a number")
+	print(" 1 - Accept a call")
+	print(" 2 - Hangup a call")
+
+	while True:
+		next_action = input("Please enter an action [0-2]: ")
+		if next_action == "0":
+			number = input(" -> Enter the number to call: ")
+			headset.dial(number)
+		if next_action == "1":
+			headset.answer_calls()
+		if next_action == "2":
+			headset.hangup_call()
 
 # check right usage
 # if "--token" not in sys.argv and "--use-stored" not in sys.argv:

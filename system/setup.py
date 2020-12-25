@@ -2,74 +2,76 @@
 # Copyright (c) 2020 by Philipp Scheer. All Rights Reserved.
 #
 
-import sys, os, hashlib, apt, re
+import sys, os, hashlib, apt, re, copy, subprocess, json, pwd
 from getpass import getpass
+from xml.etree import ElementTree as ET
+from jarvis import Colors, SetupTools
+
+DIR = os.path.dirname(os.path.realpath(__file__))
 
 def install():
 	global INSTALL_DIRECTORY
-	if get_python_version() != 3:
-		print("You need to run this script with python3")
-		exit(1)
-	if not is_root():
-		print("You need to be root!")
-		exit(1)
 
-	do_action("updating system", "sudo apt update ; sudo apt upgrade -y")
-	do_action("installing utilities", "sudo apt install -y alsa-utils bluez bluez-tools pulseaudio-module-bluetooth python-gobject python-gobject-2 ofono python3-dbus libbluetooth-dev")
-	do_action("adding pi to 'lp' group", "sudo usermod -a -G lp pi")
-	do_action("installing bluetooth packages", "sudo apt install -y python-dbus python-pip ; pip install tcpbridge bluetool")
+	SetupTools.check_python_version(3)
+	SetupTools.check_root()
+	USR = SetupTools.get_default_user(os.getlogin())
+
+	SetupTools.do_action("updating system", "sudo apt update ; sudo apt upgrade -y")
+	SetupTools.do_action("installing utilities", "sudo apt install -y alsa-utils bluez bluez-tools pulseaudio-module-bluetooth python-gobject python-gobject-2 ofono python3-dbus libbluetooth-dev")
+	SetupTools.do_action("adding pi to 'lp' group", f"sudo usermod -a -G lp {USR}")
+	SetupTools.do_action("installing bluetooth packages", "sudo apt install -y python-dbus python-pip ; pip install tcpbridge bluetool")
+	SetupTools.do_action("installing jarvis bluetooth utility (jarvis-bluetooth)", f"sudo mv {DIR}/jarvis-bluetooth /usr/bin/jarvis-bluetooth")
+	SetupTools.do_action("making jarvis-bluetooth executable", f"sudo chmod 777 /usr/bin/jarvis-bluetooth")
+
 
 	# setup bluetooth sound
 	with open("/etc/bluetooth/audio.conf", "w") as f:
 		f.write("[General]\nClass = 0x20041C\nEnable = Source,Sink,Media,Socket\n")
 
-	regex_replace_in_file("/etc/bluetooth/main.conf", "[#]?Name =.+", "Name = Jarvis")
-	regex_replace_in_file("/etc/bluetooth/main.conf", "[#]?Class =.+", "Class = 0x20041C")
-	do_action("modify bluetooth configuration", "true")
+	SetupTools.regex_replace_in_file("/etc/bluetooth/main.conf", "[#]?Name =.+", "Name = Jarvis")
+	SetupTools.regex_replace_in_file("/etc/bluetooth/main.conf", "[#]?Class =.+", "Class = 0x20041C")
+	SetupTools.do_action("modify bluetooth configuration", "true")
 
-	print("Jarvis headset successfully set up!")
-	print("Connect your device either with bluetoothctl or in the web dashboard (if it's installed)")
+
+	# modify ofono dbus config file (for a2dp)
+	cnf = ET.parse("/etc/dbus-1/system.d/ofono.conf")
+	root = cnf.getroot()
+	with open("/etc/dbus-1/system.d/ofono.conf", "r") as f:
+		text_contents = f.read()
+		pre = ""
+		try:
+			pre = re.search(f"[\w\W]*?<{root.tag}", text_contents).group(0).replace(f"<{root.tag}", "")
+		except Exception as e:
+			pass
+
+	insert_element = copy.deepcopy(root.find("policy[@user='root']"))
+	allowed_users = [child.get("user") for child in cnf.findall("policy[@user]")]
+	if USR not in allowed_users:
+		insert_element.set("user", USR)
+		root.insert(1, insert_element)
+	
+	del insert_element
+	insert_element = copy.deepcopy(root.find("policy[@user='root']"))
+	if "pulse" not in allowed_users:
+		insert_element.set("user", "pulse")
+		root.insert(1, insert_element)
+
+	final_string = f"{pre}\n{ET.tostring(root, 'unicode')}"
+	with open("/etc/dbus-1/system.d/ofono.conf", "w") as f:
+		f.write(final_string)
+
+
+	if not os.path.exists(f"/home/{USR}/.config/systemd/user/default.target.wants"):
+		os.makedirs(f"/home/{USR}/.config/systemd/user/default.target.wants")
+	os.symlink("/usr/lib/systemd/user/pulseaudio.service", "/home/pi/.config/systemd/user/default.target.wants/pulseaudio.service")
+	if not os.path.exists(f"/home/{USR}/.config/systemd/user/sockets.target.wants"):
+		os.makedirs(f"/home/{USR}/.config/systemd/user/sockets.target.wants")
+	os.symlink("/usr/lib/systemd/user/pulseaudio.socket", "/home/pi/.config/systemd/user/sockets.target.wants/pulseaudio.socket",)
+	SetupTools.do_action("changing permissions", f"sudo chown -R {USR}: /home/{USR}/.config")
+
+
+	print(f"{Colors.GREEN}Successfully set up Jarvis headset{Colors.END}\nA reboot is necessary for all features to work (especially headset functionality)")
 	exit(0)
 	
-
-
-
-def do_action(print_str, shell_command, show_output=True, on_fail="failed!", on_success="done!", exit_on_fail=True):
-	print(print_str + "... ", end="")
-
-	if not show_output:
-		shell_command += " &> /dev/null"
-
-	if not os.system(shell_command) == 0:
-		print(on_fail)
-		if exit_on_fail:
-			exit(1)
-	else:
-		print(on_success)
-
-def regex_replace_in_file(file_path, from_regex, to_string):
-	contents = None
-	with open(file_path, "r") as f:
-		contents = f.read()
-	
-	if contents is None:
-		return False
-	
-	new_contents = re.sub(from_regex, to_string, contents, flags = re.M)
-	
-	with open(file_path, "w") as f:
-		f.write(new_contents)
-	
-	return True
-
-
-
-def is_root():
-	return os.geteuid() == 0
-
-def get_python_version():
-	# (2, 5, 2, 'final', 0)
-	return sys.version_info[0]
-
 
 install()

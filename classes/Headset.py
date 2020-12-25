@@ -3,7 +3,7 @@
 #
 
 import dbus
-from classes.Logger import Logger
+from jarvis import Logger
 
 class Headset:
 	def __init__(self):
@@ -19,7 +19,7 @@ class Headset:
 		modems = self.manager.GetModems()
 		modem = modems[0][0]
 		hide_callerid = "default"
-		
+
 		if hide_caller_id is not None:
 			if hide_caller_id:
 				hide_callerid = "enabled"

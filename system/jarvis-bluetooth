@@ -5,7 +5,7 @@ import sys, json
 
 
 def usage():
-	print("Usage: python bluetooth.py2")
+	print("Usage: jarvis-bluetooth")
 	print("")
 	print("Parameters:")
 	print("  --paired                JSON list of paired devices")
