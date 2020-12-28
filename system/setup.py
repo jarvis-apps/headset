@@ -16,12 +16,13 @@ def install():
 	SetupTools.check_root()
 	USR = SetupTools.get_default_user(os.getlogin())
 
-	SetupTools.do_action("updating system", "sudo apt update ; sudo apt upgrade -y")
-	SetupTools.do_action("installing utilities", "sudo apt install -y alsa-utils bluez bluez-tools pulseaudio-module-bluetooth python-gobject python-gobject-2 ofono python3-dbus libbluetooth-dev")
-	SetupTools.do_action("adding pi to 'lp' group", f"sudo usermod -a -G lp {USR}")
-	SetupTools.do_action("installing bluetooth packages", "sudo apt install -y python-dbus python-pip ; pip install tcpbridge bluetool")
-	SetupTools.do_action("installing jarvis bluetooth utility (jarvis-bluetooth)", f"sudo mv {DIR}/jarvis-bluetooth /usr/bin/jarvis-bluetooth")
-	SetupTools.do_action("making jarvis-bluetooth executable", f"sudo chmod 777 /usr/bin/jarvis-bluetooth")
+	# update system and install bluetooth utilities
+	SetupTools.do_action("updating system", 										 "sudo apt update ; sudo apt upgrade -y")
+	SetupTools.do_action("installing utilities", 									 "sudo apt install -y alsa-utils bluez bluez-tools pulseaudio-module-bluetooth python-gobject python-gobject-2 ofono python3-dbus libbluetooth-dev")
+	SetupTools.do_action("adding pi to 'lp' group", 								f"sudo usermod -a -G lp {USR}")
+	SetupTools.do_action("installing bluetooth packages", 							 "sudo apt install -y python-dbus python-pip ; pip install tcpbridge bluetool")
+	SetupTools.do_action("installing jarvis bluetooth utility (jarvis-bluetooth)", 	f"sudo mv {DIR}/jarvis-bluetooth /usr/bin/jarvis-bluetooth")
+	SetupTools.do_action("making jarvis-bluetooth executable", 						f"sudo chmod 777 /usr/bin/jarvis-bluetooth")
 
 
 	# setup bluetooth sound
@@ -63,10 +64,16 @@ def install():
 
 	if not os.path.exists(f"/home/{USR}/.config/systemd/user/default.target.wants"):
 		os.makedirs(f"/home/{USR}/.config/systemd/user/default.target.wants")
-	os.symlink("/usr/lib/systemd/user/pulseaudio.service", "/home/pi/.config/systemd/user/default.target.wants/pulseaudio.service")
+	try:
+		os.symlink("/usr/lib/systemd/user/pulseaudio.service", "/home/pi/.config/systemd/user/default.target.wants/pulseaudio.service")
+	except FileExistsError as e:
+		pass
 	if not os.path.exists(f"/home/{USR}/.config/systemd/user/sockets.target.wants"):
 		os.makedirs(f"/home/{USR}/.config/systemd/user/sockets.target.wants")
-	os.symlink("/usr/lib/systemd/user/pulseaudio.socket", "/home/pi/.config/systemd/user/sockets.target.wants/pulseaudio.socket",)
+	try:
+		os.symlink("/usr/lib/systemd/user/pulseaudio.socket", "/home/pi/.config/systemd/user/sockets.target.wants/pulseaudio.socket",)
+	except FileExistsError as e:
+		pass
 	SetupTools.do_action("changing permissions", f"sudo chown -R {USR}: /home/{USR}/.config")
 
 

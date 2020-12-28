@@ -1,20 +1,47 @@
 #!/usr/bin/python2
 
 from bluetool import Bluetooth
+from cStringIO import StringIO
 import sys, json
 
+sout_backup = sys.stdout
+sys.stdout = buffer = StringIO()
 
+
+# get original get_output
+def get_output():
+	global buffer
+	return buffer.getvalue()
+
+# a printer function
+def sout(text):
+	global sout_backup, buffer
+	sys.stdout = sout_backup
+	print(text)
+	sys.stdout = buffer
+
+# print program usage
 def usage():
-	print("Usage: jarvis-bluetooth")
-	print("")
-	print("Parameters:")
-	print("  --paired                JSON list of paired devices")
-	print("  --available             JSON list of available devices")
-	print("  --pair <address>        Pair with a Bluetooth address")
-	print("  --trust <address>       Trust a Bluetooth address")
-	print("  --connect <address>     Connect to a Bluetooth address")
-	print("  --disconnect <address>  Disconnect from a Bluetooth address")
-	print("  --remove <address>      Unpair from a Bluetooth address")
+	sout("Usage: jarvis-bluetooth")
+	sout("")
+	sout("Parameters:")
+	sout("  --paired                JSON list of paired devices")
+	sout("  --available             JSON list of available devices")
+	sout("  --pair <address>        Pair with a Bluetooth address")
+	sout("  --trust <address>       Trust a Bluetooth address")
+	sout("  --connect <address>     Connect to a Bluetooth address")
+	sout("  --disconnect <address>  Disconnect from a Bluetooth address")
+	sout("  --remove <address>      Unpair from a Bluetooth address")
+
+# get option from sys.argv
+def get_option(name):
+	try:
+		addr = sys.argv[sys.argv.index(name) + 1]
+	except Exception as e:
+		usage()
+		exit(1)
+
+
 
 if "-h" in sys.argv or "--help" in sys.argv:
 	usage()
@@ -29,57 +56,32 @@ bt = Bluetooth()
 bt.make_discoverable()
 
 if "--pair" in sys.argv:
-	addr = None
-	try:
-		addr = sys.argv[sys.argv.index("--pair") + 1]
-	except Exception as e:
-		usage()
-		exit(1)
-	print(json.dumps({"success":bt.pair(addr)}))
+	addr = get_option("--pair")
+	sout(json.dumps({"success":bt.pair(addr), "error": get_output()}))
 	exit(0)
 if "--trust" in sys.argv:
-	addr = None
-	try:
-		addr = sys.argv[sys.argv.index("--trust") + 1]
-	except Exception as e:
-		usage()
-		exit(1)
-	print(json.dumps({"success":bt.trust(addr)}))
+	addr = get_option("--trust")
+	sout(json.dumps({"success":bt.trust(addr), "error": get_output()}))
 	exit(0)
 if "--connect" in sys.argv:
-	addr = None
-	try:
-		addr = sys.argv[sys.argv.index("--connect") + 1]
-	except Exception as e:
-		usage()
-		exit(1)
-	print(json.dumps({"success":bt.connect(addr)}))
+	addr = get_option("--connect")
+	sout(json.dumps({"success":bt.connect(addr), "error": get_output()}))
 	exit(0)
 if "--disconnect" in sys.argv:
-	addr = None
-	try:
-		addr = sys.argv[sys.argv.index("--disconnect") + 1]
-	except Exception as e:
-		usage()
-		exit(1)
-	print(json.dumps({"success":bt.disconnect(addr)}))
+	addr = get_option("--disconnect")
+	sout(json.dumps({"success":bt.disconnect(addr), "error": get_output()}))
 	exit(0)
 if "--remove" in sys.argv:
-	addr = None
-	try:
-		addr = sys.argv[sys.argv.index("--remove") + 1]
-	except Exception as e:
-		usage()
-		exit(1)
-	print(json.dumps({"success":bt.remove(addr)}))
+	addr = get_option("--remove")
+	sout(json.dumps({"success":bt.remove(addr), "error": get_output()}))
 	exit(0)
 
 
 bt.scan(2)
 if "--paired" in sys.argv:
-	print(json.dumps(bt.get_paired_devices()))
+	sout(json.dumps({"result":bt.get_paired_devices(), "error": get_output()}))
 	exit(0)
 if "--available" in sys.argv:
-	print(json.dumps(bt.get_available_devices()))
+	sout(json.dumps({"result":bt.get_available_devices(), "error": get_output()}))
 	exit(0)
 
