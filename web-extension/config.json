@@ -1,5 +1,6 @@
 {
 	"path": "/bluetooth",
 	"material_icon": "bluetooth",
-	"file": "bluetooth.php"
+	"file": "bluetooth.php",
+	"name": "Bluetooth"
 }

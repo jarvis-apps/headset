@@ -17,7 +17,7 @@ def install():
 	USR = SetupTools.get_default_user(os.getlogin())
 
 	# update system and install bluetooth utilities
-	SetupTools.do_action("updating system", 										 "sudo apt update ; sudo apt upgrade -y")
+	SetupTools.do_action("updating system", 										 "sudo apt update ; sudo apt upgrade -y", exit_on_fail=False)
 	SetupTools.do_action("installing utilities", 									 "sudo apt install -y alsa-utils bluez bluez-tools pulseaudio-module-bluetooth python-gobject python-gobject-2 ofono python3-dbus libbluetooth-dev")
 	SetupTools.do_action("adding pi to 'lp' group", 								f"sudo usermod -a -G lp {USR}")
 	SetupTools.do_action("installing bluetooth packages", 							 "sudo apt install -y python-dbus python-pip ; pip install tcpbridge bluetool")
