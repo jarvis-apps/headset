@@ -23,7 +23,11 @@ def install():
 	SetupTools.do_action("installing bluetooth packages", 							 "sudo apt install -y python-dbus python-pip ; pip install tcpbridge bluetool")
 	SetupTools.do_action("installing jarvis bluetooth utility (jarvis-bluetooth)", 	f"sudo mv {DIR}/jarvis-bluetooth /usr/bin/jarvis-bluetooth")
 	SetupTools.do_action("making jarvis-bluetooth executable", 						f"sudo chmod 777 /usr/bin/jarvis-bluetooth")
+	SetupTools.do_action("adding set-uid bit to jarvis-bluetooth executable", 		f"sudo chmod u+s /usr/bin/jarvis-bluetooth")
 
+	# allow web app to access the bluetooth executable
+	with open("/etc/sudoers.d/123_apache_access_jarvis", "w") as f:
+		f.write(f"www-data ALL=({USR}:{USR}) NOPASSWD:/usr/bin/jarvis-bluetooth")
 
 	# setup bluetooth sound
 	with open("/etc/bluetooth/audio.conf", "w") as f:
@@ -75,10 +79,6 @@ def install():
 	except FileExistsError as e:
 		pass
 	SetupTools.do_action("changing permissions", f"sudo chown -R {USR}: /home/{USR}/.config")
-
-
-	print(f"{Colors.GREEN}Successfully set up Jarvis headset{Colors.END}\nA reboot is necessary for all features to work (especially headset functionality)")
-	exit(0)
 	
 
 install()

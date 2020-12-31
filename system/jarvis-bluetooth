@@ -1,42 +1,34 @@
 #!/usr/bin/python2
 
 from bluetool import Bluetooth
-from cStringIO import StringIO
-import sys, json
-
-sout_backup = sys.stdout
-sys.stdout = buffer = StringIO()
+import sys, json, subprocess
 
 
-# get original get_output
-def get_output():
-	global buffer
-	return buffer.getvalue()
-
-# a printer function
-def sout(text):
-	global sout_backup, buffer
-	sys.stdout = sout_backup
-	print(text)
-	sys.stdout = buffer
+# check terminal command
+def terminal(cmd):
+	try:
+		return (0, subprocess.check_output(cmd.split(" ")))
+	except subprocess.CalledProcessError as e:
+		return (e.returncode, e.output + str(e.cmd))
 
 # print program usage
 def usage():
-	sout("Usage: jarvis-bluetooth")
-	sout("")
-	sout("Parameters:")
-	sout("  --paired                JSON list of paired devices")
-	sout("  --available             JSON list of available devices")
-	sout("  --pair <address>        Pair with a Bluetooth address")
-	sout("  --trust <address>       Trust a Bluetooth address")
-	sout("  --connect <address>     Connect to a Bluetooth address")
-	sout("  --disconnect <address>  Disconnect from a Bluetooth address")
-	sout("  --remove <address>      Unpair from a Bluetooth address")
+	print("Usage: jarvis-bluetooth")
+	print("")
+	print("Parameters:")
+	print("  --paired                JSON list of paired devices")
+	print("  --available             JSON list of available devices")
+	print("  --connected             JSON list of connected devices")
+	print("  --pair <address>        Pair with a Bluetooth address")
+	print("  --trust <address>       Trust a Bluetooth address")
+	print("  --connect <address>     Connect to a Bluetooth address")
+	print("  --disconnect <address>  Disconnect from a Bluetooth address")
+	print("  --remove <address>      Unpair from a Bluetooth address")
 
 # get option from sys.argv
 def get_option(name):
 	try:
-		addr = sys.argv[sys.argv.index(name) + 1]
+		return sys.argv[sys.argv.index(name) + 1]
 	except Exception as e:
 		usage()
 		exit(1)
@@ -45,43 +37,75 @@ def get_option(name):
 
 if "-h" in sys.argv or "--help" in sys.argv:
 	usage()
-	exit(0)	
+	exit(0)
 
 if len(sys.argv) < 2:
 	usage()
 	exit(1)
 
-# bluetooth commands
+
 bt = Bluetooth()
 bt.make_discoverable()
 
+if "--use-bluetoothctl" not in sys.argv:
+	if "--pair" in sys.argv:
+		addr = get_option("--pair")
+		print(json.dumps({"success":bt.pair(addr), "error": ""}))
+		exit(0)
+	if "--trust" in sys.argv:
+		addr = get_option("--trust")
+		print(json.dumps({"success":bt.trust(addr), "error": ""}))
+		exit(0)
+	if "--connect" in sys.argv:
+		addr = get_option("--connect")
+		print(json.dumps({"success":bt.connect(addr), "error": ""}))
+		exit(0)
+	if "--disconnect" in sys.argv:
+		addr = get_option("--disconnect")
+		print(json.dumps({"success":bt.disconnect(addr), "error": ""}))
+		exit(0)
+	if "--remove" in sys.argv:
+		addr = get_option("--remove")
+		print(json.dumps({"success":bt.remove(addr), "error": ""}))
+		exit(0)
+
+# turned out to be more reliable (sometimes)
 if "--pair" in sys.argv:
 	addr = get_option("--pair")
-	sout(json.dumps({"success":bt.pair(addr), "error": get_output()}))
+	out = terminal("bluetoothctl pair %s" % addr)
+	print(json.dumps({"success": True if out[0] == 0 else False, "error": out[1]}))
 	exit(0)
 if "--trust" in sys.argv:
 	addr = get_option("--trust")
-	sout(json.dumps({"success":bt.trust(addr), "error": get_output()}))
+	out = terminal("bluetoothctl trust %s" % addr)
+	print(json.dumps({"success": True if out[0] == 0 else False, "error": out[1]}))
 	exit(0)
 if "--connect" in sys.argv:
 	addr = get_option("--connect")
-	sout(json.dumps({"success":bt.connect(addr), "error": get_output()}))
+	out = terminal("bluetoothctl connect %s" % addr)
+	print(json.dumps({"success": True if out[0] == 0 else False, "error": out[1]}))
 	exit(0)
 if "--disconnect" in sys.argv:
 	addr = get_option("--disconnect")
-	sout(json.dumps({"success":bt.disconnect(addr), "error": get_output()}))
+	out = terminal("bluetoothctl disconnect %s" % addr)
+	print(json.dumps({"success": True if out[0] == 0 else False, "error": out[1]}))
 	exit(0)
 if "--remove" in sys.argv:
 	addr = get_option("--remove")
-	sout(json.dumps({"success":bt.remove(addr), "error": get_output()}))
+	out = terminal("bluetoothctl unpair %s" % addr)
+	print(json.dumps({"success": True if out[0] == 0 else False, "error": out[1]}))
 	exit(0)
 
 
-bt.scan(2)
-if "--paired" in sys.argv:
-	sout(json.dumps({"result":bt.get_paired_devices(), "error": get_output()}))
-	exit(0)
+# bluetooth commands
+result = []
 if "--available" in sys.argv:
-	sout(json.dumps({"result":bt.get_available_devices(), "error": get_output()}))
-	exit(0)
+	bt.scan(2)
+	result.append(bt.get_available_devices())
+if "--paired" in sys.argv:
+	result.append(bt.get_paired_devices())
+if "--connected" in sys.argv:
+	result.append(bt.get_connected_devices())
 
+print(json.dumps({"result":result, "error": ""}))
+exit(0)
