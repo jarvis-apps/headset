@@ -3,8 +3,10 @@
 #
 
 # do imports
-import sys, os, time
-from jarvis import Jarvis, Logger, MQTT
+import sys
+import os
+import time
+from jarvis import Jarvis, Logger, MQTT, Exiter
 from classes.Headset import Headset
 
 # define globals
@@ -16,21 +18,53 @@ LOG_TAG = "app:headsetd"
 headset = Headset()
 
 
-if "--test" in sys.argv:
-	print("You're running this script in test mode. You have the following options:")
-	print(" 0 - Call a number")
-	print(" 1 - Accept a call")
-	print(" 2 - Hangup a call")
+def on_call(call):
+    global jarvis
+    print("ingoing call: ")
+    print(call)
 
-	while True:
-		next_action = input("Please enter an action [0-2]: ")
-		if next_action == "0":
-			number = input(" -> Enter the number to call: ")
-			headset.dial(number)
-		if next_action == "1":
-			headset.answer_calls()
-		if next_action == "2":
-			headset.hangup_call()
+
+headset.on_ingoing_call(on_call)
+
+
+# mainloop
+while Exiter.running:
+    time.sleep(1)
+
+
+if "--test" in sys.argv:
+    print("You're running this script in test mode. You have the following options:")
+    print(" 0 - Call a number")
+    print(" 1 - Accept a call")
+    print(" 2 - Hangup a call")
+    print(" 3 - Hold and anwer")
+    print(" 4 - Release and answer")
+    print(" 5 - Release and swap")
+    print(" 6 - Is call incoming?")
+
+    while True:
+        next_action = input("Please enter an action [0-6]: ")
+        if next_action == "0":
+            headset.dial(
+                input(" -> Enter the number to call: ")
+            )
+        if next_action == "1":
+            headset.answer_calls()
+        if next_action == "2":
+            headset.hangup_all()
+        if next_action == "3":
+            headset.hold_and_answer()
+        if next_action == "4":
+            headset.release_and_answer()
+        if next_action == "5":
+            headset.release_and_swap()
+        if next_action == "6":
+            ci = headset.is_call_incoming()
+            if ci:
+                print(ci)
+            else:
+                print("No call incoming..." + str(ci))
+
 
 # check right usage
 # if "--token" not in sys.argv and "--use-stored" not in sys.argv:
@@ -60,7 +94,7 @@ if "--test" in sys.argv:
 
 # # program logic
 # jarvis = Jarvis("localhost", token)
-# logger = Logger(LOG_FILE)
+# logger = Logger()
 # logger.print_on()
 
 
